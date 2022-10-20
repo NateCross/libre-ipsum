@@ -19,6 +19,7 @@
 
 ## Tech Stack
 - [epub.js](https://github.com/futurepress/epub.js/)
+  - [React Reader](https://github.com/gerhardsletten/react-reader)
 - Typescript
 
 # Original Readme Follows
