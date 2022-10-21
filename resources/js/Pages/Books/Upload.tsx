@@ -76,7 +76,7 @@ export default function Upload() {
     if (data?.book) {
       readEpubFile(data?.book);
 
-      // post('/books');
+      post('/books');
     }
   }
 
@@ -103,9 +103,6 @@ export default function Upload() {
         <button type="submit">Submit</button>
       </form>
 
-      <div>
-
-      </div>
       {bookInfo && <div className='h-screen'>
         <ReactReader 
           location={location}

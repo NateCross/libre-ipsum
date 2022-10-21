@@ -5,6 +5,7 @@
 - Clone this repository.
 - `composer install`
 - `npm i --include=dev`
+- `php artisan storage:link`
 - Setup the .env file. Pay attention to the database portion.
 - `php artisan migrate`
 

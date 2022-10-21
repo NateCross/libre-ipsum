@@ -14,10 +14,13 @@ class BookController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
+        return Inertia::render('Books/Index', [
+            'books' => auth()->user()->books->all(),
+        ]);
         //
-        return Storage::download('6fKe2Hcf0sD9dHn7du9IPQuXM3M2T5372C4P1HP3.epub');
+        // return Storage::download('6fKe2Hcf0sD9dHn7du9IPQuXM3M2T5372C4P1HP3.epub');
     }
 
     /**
@@ -38,8 +41,17 @@ class BookController extends Controller
      */
     public function store(Request $request)
     {
-        $path = $request->file('book')->store('books');
-        return $path;
+        $user = $request->user();
+        $path = $request->file('book')->store('public/books');
+        // Remove the public part of the url
+        $path = str_replace('public/', '', $path);
+        $book = $user->books()->create([
+            'path' => $path,
+        ]);
+        // $book = Book::create([
+        //     'path' => $path,
+        // ]);
+        return redirect($path);
     }
 
     /**
@@ -50,6 +62,21 @@ class BookController extends Controller
      */
     public function show(Book $book)
     {
+        // echo Storage::get($book['path']);
+        // return Storage::download($book->path);
+        return Inertia::render('Books/Reader', [
+        //     // 'book' => ,
+            'book' => asset('storage/'.$book['path']),
+        //     // 'book' => Storage::url($book['path']),
+        //     // 'book' => Storage::get($book['path']),
+        // // return Storage::download('6fKe2Hcf0sD9dHn7du9IPQuXM3M2T5372C4P1HP3.epub');
+        ]);
+    }
+
+    public function all(Request $request)
+    {
+        // $books = $request->user()->books;
+        return $request->user()->books->all();
     }
 
     /**

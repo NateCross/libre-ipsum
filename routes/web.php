@@ -30,7 +30,13 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::resource('books', BookController::class)
-    ->only(['create', 'store', 'index'])
+    ->only(['create', 'store', 'index', 'show'])
     ->middleware(['auth', 'verified']);
+
+Route::controller(BookController::class)->group(function() {
+    Route::get('books/all', 'all')
+        ->name('getall')
+        ->middleware(['auth', 'verified']);
+});
 
 require __DIR__.'/auth.php';
