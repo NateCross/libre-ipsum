@@ -12,7 +12,15 @@ class Book extends Model
     use HasFactory;
 
     protected $fillable = [
-        'path'
+        'path',
+        'metadata',
+        'cover_image',
+        'user_data',
+    ];
+
+    protected $casts = [
+        'metadata' => 'array',
+        'user_data' => 'array',
     ];
 
     public function user() {

@@ -37,6 +37,9 @@ Route::controller(BookController::class)->group(function() {
     Route::get('books/all', 'all')
         ->name('getall')
         ->middleware(['auth', 'verified']);
+    Route::post('books/update/{book}', 'update')
+        ->name('books.update')
+        ->middleware(['auth', 'verified']);
 });
 
 require __DIR__.'/auth.php';

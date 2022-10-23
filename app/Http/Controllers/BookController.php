@@ -16,11 +16,11 @@ class BookController extends Controller
      */
     public function index(Request $request)
     {
+        // TODO: Use pagination or stagger the books in some way
+        $books = auth()->user()->books->all();
         return Inertia::render('Books/Index', [
-            'books' => auth()->user()->books->all(),
+            'books' => $books,
         ]);
-        //
-        // return Storage::download('6fKe2Hcf0sD9dHn7du9IPQuXM3M2T5372C4P1HP3.epub');
     }
 
     /**
@@ -42,16 +42,32 @@ class BookController extends Controller
     public function store(Request $request)
     {
         $user = $request->user();
+
         $path = $request->file('book')->store('public/books');
         // Remove the public part of the url
         $path = str_replace('public/', '', $path);
+
+
+        // Remove the "data:image/png;base64" part
+        // That text makes base64_decode not work
+        $cover_string = explode(',', $request->input('cover'))[1];
+
+        // The image we extract is a base64 string,
+        // so we have to save it manually by using the put method
+        // But we also have to decode the base64 so the image properly loads
+        // or we get garbled and inaccessible data
+        $filename = explode('/', $path)[1];
+        $filenameNoExt = explode('.', $filename)[0];
+        $cover_path = 'public/books/images/' . $filenameNoExt . '.jpg';
+        Storage::put($cover_path, base64_decode($cover_string));
+        $cover_path = str_replace('public/', '/storage/', $cover_path);
+
         $book = $user->books()->create([
             'path' => $path,
+            'metadata' => json_encode($request->input('metadata')),
+            'cover_image' => $cover_path,
         ]);
-        // $book = Book::create([
-        //     'path' => $path,
-        // ]);
-        return redirect($path);
+        return redirect('books/'.$book['id']);
     }
 
     /**
@@ -62,21 +78,15 @@ class BookController extends Controller
      */
     public function show(Book $book)
     {
-        // echo Storage::get($book['path']);
-        // return Storage::download($book->path);
-        return Inertia::render('Books/Reader', [
-        //     // 'book' => ,
-            'book' => asset('storage/'.$book['path']),
-        //     // 'book' => Storage::url($book['path']),
-        //     // 'book' => Storage::get($book['path']),
-        // // return Storage::download('6fKe2Hcf0sD9dHn7du9IPQuXM3M2T5372C4P1HP3.epub');
-        ]);
-    }
+        $user = auth()->user();
 
-    public function all(Request $request)
-    {
-        // $books = $request->user()->books;
-        return $request->user()->books->all();
+        // Stop unauthorized user from accessing another book
+        if ($book['user_id'] != $user['id'])
+            return redirect('books', 401);
+
+        return Inertia::render('Books/Reader', [
+            'book' => asset('storage/'.$book['path']),
+        ]);
     }
 
     /**
@@ -99,7 +109,9 @@ class BookController extends Controller
      */
     public function update(Request $request, Book $book)
     {
-        //
+        $book['user_data'] = json_encode($request->input('userData'));
+        $book->push();
+        return $request->all();
     }
 
     /**
@@ -110,6 +122,9 @@ class BookController extends Controller
      */
     public function destroy(Book $book)
     {
-        //
+        Storage::delete('public/'.$book['path']);
+        Storage::delete($book['cover_image']);
+        $book->delete();
+        return $this->index;
     }
 }

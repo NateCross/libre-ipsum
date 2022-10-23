@@ -1,17 +1,11 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 
 import { ReactReader } from 'react-reader';
 
 export default function Reader({ auth, book }) {
-  const [bookData, setBookData] = useState<string | null>(1);
   const [location, setLocation] = useState<string | number | undefined>(undefined);
 
   console.log(book);
-
-  // Fetch book from path and convert to arraybuffer that can be read
-  // useEffect(() => {
-
-  // });
 
   function locationChanged(epubcfi: string) {
     setLocation(epubcfi);
@@ -19,8 +13,7 @@ export default function Reader({ auth, book }) {
 
   return (
     <div>
-
-      {bookData ? 
+      {book ? 
         (
           <div 
             className='

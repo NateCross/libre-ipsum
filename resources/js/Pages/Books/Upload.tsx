@@ -1,21 +1,49 @@
-import React, { FormEvent, ChangeEvent, useState } from 'react'
-import { useForm } from '@inertiajs/inertia-react';
+import React, { FormEvent, ChangeEvent, useState, useEffect } from 'react'
+import { useForm, Link } from '@inertiajs/inertia-react';
 import epub from 'epubjs';
-import { ReactReader } from 'react-reader';
 
 interface BookUploadForm {
-  book: File | undefined,
+  book?: File,
+  metadata?: Metadata,
+  cover?: string | ArrayBuffer | null,
+}
+
+interface Metadata {
+  creator: string,
+  description: string,
+  direction?: string | null,
+  flow: string,
+  identifier: string,
+  language: string,
+  layout: string,
+  media_active_class?: string,
+  modified_date: string,
+  orientation: string,
+  pubdate: string,
+  publisher: string,
+  rights: string,
+  spread: string,
+  title: string,
+  viewport: string,
 }
 
 export default function Upload() {
   const { data, setData, post, progress } = useForm<BookUploadForm>({
     book: undefined,
+    metadata: undefined,
+    cover: undefined,
   });
-  const [bookInfo, setBookInfo] = useState('');
-  const [location, setLocation] = useState<string | number | undefined>(undefined);
-  const locationChanged = (epubcfi: string) => {
-    setLocation(epubcfi);
-  }
+  const [bookCoverUrl, setBookCoverUrl] = useState<string>('');
+
+  // You cannot use setData inside a function that also calls setData because it overwrites
+  // So, we use this to chain setData calls without overwriting
+  // previous changes to that hook
+  useEffect(() => {
+    readEpubFile(data.book);
+  }, [data.book])
+  useEffect(() => {
+    setData('cover', bookCoverUrl);
+  }, [bookCoverUrl]);
 
   function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
     e.preventDefault();
@@ -30,7 +58,9 @@ export default function Upload() {
   // We use an HTTP request to get the image from the url,
   // then we can load the response into the File Reader to get
   // a base64 string of the image file that can be saved
-  function getImageFromFileReader(coverUrl: string) {
+  function getImageFromFileReader(coverUrl: string | null) {
+    if (!coverUrl) return;
+
     const xhr = new XMLHttpRequest();
     xhr.open("GET", coverUrl, true);
     xhr.responseType = "blob";
@@ -40,16 +70,8 @@ export default function Upload() {
       if (((xhr.status === 200) || (xhr.status == 0)) && (xhr.response)) {
         const ImgReader = new FileReader();
         ImgReader.onloadend = function() {
-          // storeBookToLib(bookData.target.result, Lib.bookLib, "Library", metadata, ImgReader.result);
-
-          // Need to execute the functions directly after uploading a book
-          // Async await does not work here, apparently, so we use 'then'
-          // to make these async functions execute one after the other
-          // Lib.saveLibrary().then(() => {
-          //   Lib.openReaderEvent(Lib.bookLib.length - 1)();
-            // Lib.refreshLibraryDisplay();
-          // });
-          // showToast('Added new EPUB to Library.');
+          const url = ImgReader.result as string;
+          setBookCoverUrl(url);
         }
         ImgReader.readAsDataURL(xhr.response);
       }
@@ -57,14 +79,17 @@ export default function Upload() {
     xhr.send(null);
   }
 
-  function readEpubFile(file: File) {
+  function readEpubFile(file?: File) {
+    if (!file) return;
+
     const reader = new FileReader();
 
     reader.onload = async bookData => {
       const book = epub({ replacements: 'base64' });
       const result = bookData.target?.result as string;
       await book.open(result, 'base64');
-      setBookInfo(result);
+      setData('metadata', book.packaging.metadata);
+      getImageFromFileReader(await book.coverUrl());
     };
 
     reader.readAsArrayBuffer(file)
@@ -72,19 +97,13 @@ export default function Upload() {
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    console.log(data);
 
     if (data?.book) {
-      readEpubFile(data?.book);
 
       post('/books');
     }
   }
-
-  // let book = epub("books");
-  // let book = epub("https://s3.amazonaws.com/epubjs/books/alice/OPS/package.opf");
-  // let book = epub('x9MnQhZ3hr4CvfRfihF6uT4NCHYRkNARL2L0L2wd.epub');
-  // let rendition = book.renderTo('display', {width: 600, height: 400});
-  // let displayed = rendition.display();
 
   return (
     <>
@@ -98,21 +117,28 @@ export default function Upload() {
         Upload a Book
       </h1>
 
+      <Link
+        href='/books'
+        className='
+          bg-red-500
+          text-white
+          hover:bg-white
+          hover:text-red-500
+          px-4
+          py-2
+          border-2
+          border-black
+          rounded
+          transition-all
+        '
+      >
+        Back to Library
+      </Link>
+
       <form onSubmit={handleSubmit}>
-        <input type="file" onChange={handleFileChange} accept='.epub'  />
+        <input type="file" onChange={handleFileChange} accept='.epub' />
         <button type="submit">Submit</button>
       </form>
-
-      {bookInfo && <div className='h-screen'>
-        <ReactReader 
-          location={location}
-          locationChanged={locationChanged}
-          url={bookInfo}
-        />
-      </div>}
-
-
-
     </>
   )
 }
